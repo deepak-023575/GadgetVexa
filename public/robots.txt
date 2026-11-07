@@ -1,0 +1,6 @@
+# Robots.txt for GadgetVexa
+User-agent: *
+Allow: /
+Disallow: /api/
+
+Sitemap: https://gadgetvexa.com/sitemap.xml

@@ -1,0 +1,6 @@
+{
+  "name": "Benkuu Electronics - Affiliate Store & Admin",
+  "description": "Premium electronics affiliate marketing platform with live product comparison, deals, FTC disclosures, and complete admin management for products and categories.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
