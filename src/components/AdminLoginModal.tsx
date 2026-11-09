@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { ShieldCheck, Lock, Eye, EyeOff, AlertCircle, KeyRound, X } from 'lucide-react';
+import { Lock, Eye, EyeOff, AlertCircle, KeyRound, X } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 
 export const AdminLoginModal: React.FC = () => {
-  const { isAdminLoginModalOpen, setIsAdminLoginModalOpen, adminLogin, settings } = useStore();
+  const { isAdminLoginModalOpen, setIsAdminLoginModalOpen, adminLogin } = useStore();
   const [pin, setPin] = useState('');
   const [showPin, setShowPin] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,13 +22,8 @@ export const AdminLoginModal: React.FC = () => {
       setError(null);
       setPin('');
     } else {
-      setError('Galat PIN! Default PIN "1234" hai ya apna saved PIN dalein.');
+      setError('Galat Security PIN! Kripya sahi PIN enter karein.');
     }
-  };
-
-  const useDefaultPin = () => {
-    setPin('1234');
-    setError(null);
   };
 
   return (
@@ -64,7 +59,7 @@ export const AdminLoginModal: React.FC = () => {
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div className="text-center pb-2">
             <p className="text-sm text-slate-600 dark:text-slate-300">
-              Is portal se aap products add/edit/delete kar sakte hain, affiliate tags set kar sakte hain, aur categories manage kar sakte hain.
+              Is portal se aap products add/edit/delete kar sakte hain aur store settings manage kar sakte hain.
             </p>
           </div>
 
@@ -91,7 +86,7 @@ export const AdminLoginModal: React.FC = () => {
                   if (error) setError(null);
                 }}
                 autoFocus
-                placeholder="4-digit PIN (e.g. 1234)"
+                placeholder="Enter Secret PIN"
                 className="w-full pl-11 pr-12 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono text-center text-lg tracking-widest placeholder:tracking-normal placeholder:font-sans placeholder:text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 shadow-inner"
               />
               <button
@@ -105,23 +100,8 @@ export const AdminLoginModal: React.FC = () => {
             </div>
           </div>
 
-          {/* Quick Default Pin helper badge */}
-          <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40 rounded-xl p-3 flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2 text-amber-800 dark:text-amber-300">
-              <ShieldCheck className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
-              <span>Default PIN: <strong className="font-mono">{settings.adminPin || '1234'}</strong></span>
-            </div>
-            <button
-              type="button"
-              onClick={useDefaultPin}
-              className="text-xs font-semibold text-amber-700 dark:text-amber-400 hover:underline hover:text-amber-800"
-            >
-              Autofill PIN
-            </button>
-          </div>
-
           <p className="text-[11px] text-slate-500 dark:text-slate-400 text-center">
-            * Aap login karne ke baad <strong>Settings</strong> me jaakar apna naya secret PIN change kar sakte hain.
+            🔒 Unauthorized access is strictly restricted. Only store admin can login.
           </p>
 
           {/* Action buttons */}
