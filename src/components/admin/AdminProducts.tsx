@@ -12,7 +12,9 @@ import {
   X, 
   Check, 
   AlertCircle,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Store,
+  Tag
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import { Product, StorePlatform } from '../../types';
@@ -57,6 +59,56 @@ export const AdminProducts: React.FC = () => {
   const [isDealOfTheDay, setIsDealOfTheDay] = useState(false);
   const [isTopSeller, setIsTopSeller] = useState(false);
 
+  // Multi-Store Comparison Offers State (e.g. Amazon India + Flipkart + Croma)
+  const [comparisonOffers, setComparisonOffers] = useState<Array<{
+    id: string;
+    store: StorePlatform;
+    price: string;
+    regularPrice: string;
+    url: string;
+    badge: string;
+  }>>([]);
+
+  const addComparisonStore = () => {
+    const usedStores = comparisonOffers.map((o) => o.store);
+    const allStores: StorePlatform[] = [
+      'amazon',
+      'flipkart',
+      'croma',
+      'reliance',
+      'apple',
+      'bestbuy',
+      'bhphoto',
+      'walmart',
+      'newegg',
+      'target',
+    ];
+    const nextStore = allStores.find((s) => !usedStores.includes(s)) || 'flipkart';
+
+    setComparisonOffers((prev) => [
+      ...prev,
+      {
+        id: `offer-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        store: nextStore,
+        price: salePrice || '1999',
+        regularPrice: regularPrice || '3499',
+        url: '',
+        badge: 'Verified Deal',
+      },
+    ]);
+  };
+
+  const updateComparisonStore = (id: string, field: 'store' | 'price' | 'regularPrice' | 'url' | 'badge', value: any) => {
+    setComparisonOffers((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, [field]: value } : item))
+    );
+  };
+
+  const removeComparisonStore = (id: string) => {
+    if (comparisonOffers.length <= 1) return;
+    setComparisonOffers((prev) => prev.filter((item) => item.id !== id));
+  };
+
   // Dynamic Specs & Pros/Cons
   const [specs, setSpecs] = useState<Array<{ key: string; val: string }>>([
     { key: 'Connectivity', val: 'Bluetooth 5.3 + 3.5mm' },
@@ -87,6 +139,24 @@ export const AdminProducts: React.FC = () => {
     setIsFeatured(true);
     setIsDealOfTheDay(false);
     setIsTopSeller(false);
+    setComparisonOffers([
+      {
+        id: `offer-${Date.now()}-0`,
+        store: 'amazon',
+        price: '1999',
+        regularPrice: '3499',
+        url: `https://www.amazon.in/s?k=example&tag=${settings.defaultAmazonTag}`,
+        badge: 'Lowest Price',
+      },
+      {
+        id: `offer-${Date.now()}-1`,
+        store: 'flipkart',
+        price: '2199',
+        regularPrice: '3499',
+        url: 'https://www.flipkart.com/search?q=example',
+        badge: 'Verified Deal',
+      },
+    ]);
     setSpecs([
       { key: 'Connectivity', val: 'Wireless + USB-C' },
       { key: 'Warranty', val: '1 Year Manufacturer' },
@@ -113,6 +183,40 @@ export const AdminProducts: React.FC = () => {
     setIsFeatured(!!p.isFeatured);
     setIsDealOfTheDay(!!p.isDealOfTheDay);
     setIsTopSeller(!!p.isTopSeller);
+
+    // Initialize multi-store comparison links
+    if (p.priceComparison && p.priceComparison.length > 0) {
+      setComparisonOffers(
+        p.priceComparison.map((c, idx) => ({
+          id: `offer-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 6)}`,
+          store: c.store,
+          price: (c.price !== undefined && c.price !== null) ? c.price.toString() : p.salePrice.toString(),
+          regularPrice: (c.regularPrice !== undefined && c.regularPrice !== null) ? c.regularPrice.toString() : p.regularPrice.toString(),
+          url: c.url || p.affiliateUrl || '',
+          badge: c.badge || (idx === 0 ? 'Lowest Price' : 'Verified Deal'),
+        }))
+      );
+    } else {
+      setComparisonOffers([
+        {
+          id: `offer-${Date.now()}-0`,
+          store: p.primaryStore || 'amazon',
+          price: p.salePrice.toString(),
+          regularPrice: p.regularPrice.toString(),
+          url: p.affiliateUrl || '',
+          badge: 'Lowest Price',
+        },
+        {
+          id: `offer-${Date.now()}-1`,
+          store: (p.primaryStore === 'amazon' ? 'flipkart' : 'amazon') as StorePlatform,
+          price: p.salePrice.toString(),
+          regularPrice: p.regularPrice.toString(),
+          url: '',
+          badge: 'Verified Deal',
+        },
+      ]);
+    }
+
     setSpecs(
       Object.entries(p.specifications || {}).map(([k, v]) => ({ key: k, val: v }))
     );
@@ -136,6 +240,23 @@ export const AdminProducts: React.FC = () => {
       }
     });
 
+    // Build multi-store price comparison from comparisonOffers
+    const validOffers = comparisonOffers.filter((o) => o.url.trim() !== '');
+    const activeOffers = validOffers.length > 0 ? validOffers : comparisonOffers;
+
+    const priceCompList = activeOffers.map((o, idx) => ({
+      store: o.store,
+      storeName: STORE_BADGES[o.store]?.name || o.store.toUpperCase(),
+      price: parseFloat(o.price) || saleNum,
+      regularPrice: parseFloat(o.regularPrice) || regNum,
+      url: o.url.trim() || `https://www.amazon.in/s?k=${encodeURIComponent(title)}&tag=${settings.defaultAmazonTag}`,
+      inStock: true,
+      badge: o.badge || (idx === 0 ? 'Lowest Price' : 'Verified Deal'),
+    }));
+
+    const sortedOffers = [...priceCompList].sort((a, b) => a.price - b.price);
+    const bestOffer = sortedOffers[0] || priceCompList[0];
+
     const productPayload = {
       title,
       slug: title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
@@ -157,19 +278,9 @@ export const AdminProducts: React.FC = () => {
       specifications: specRecord,
       pros: pros.filter((p) => p.trim()),
       cons: cons.filter((c) => c.trim()),
-      primaryStore,
-      affiliateUrl: affiliateUrl || `https://www.amazon.com/s?k=${encodeURIComponent(title)}&tag=${settings.defaultAmazonTag}`,
-      priceComparison: [
-        {
-          store: primaryStore,
-          storeName: STORE_BADGES[primaryStore]?.name || 'Amazon',
-          price: saleNum,
-          regularPrice: regNum,
-          url: affiliateUrl,
-          inStock: true,
-          badge: 'Verified Deal',
-        },
-      ],
+      primaryStore: bestOffer.store,
+      affiliateUrl: bestOffer.url,
+      priceComparison: priceCompList,
     };
 
     if (editingProduct) {
@@ -248,123 +359,79 @@ export const AdminProducts: React.FC = () => {
               <tr>
                 <th className="p-3.5">Product</th>
                 <th className="p-3.5">Category</th>
-                <th className="p-3.5">Price & Discount</th>
-                <th className="p-3.5">Store & Link</th>
-                <th className="p-3.5">Status Badges</th>
-                <th className="p-3.5 text-center">Clicks</th>
+                <th className="p-3.5">Price & Deal</th>
+                <th className="p-3.5">Store Deals</th>
+                <th className="p-3.5">Clicks</th>
                 <th className="p-3.5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-              {filtered.map((p) => {
-                const badge = STORE_BADGES[p.primaryStore] || STORE_BADGES.amazon;
+              {filtered.map((product) => {
+                const storeBadge = STORE_BADGES[product.primaryStore] || STORE_BADGES.amazon;
                 return (
-                  <tr key={p.id} className="hover:bg-zinc-50/60 dark:hover:bg-zinc-800/30 transition-colors">
-                    {/* Product */}
-                    <td className="p-3.5 min-w-[260px]">
+                  <tr key={product.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors">
+                    <td className="p-3.5">
                       <div className="flex items-center gap-3">
                         <img
-                          src={p.mainImage}
-                          alt={p.title}
-                          className="w-12 h-12 object-contain rounded-xl bg-zinc-50 dark:bg-zinc-800 p-1 shrink-0 border border-zinc-200 dark:border-zinc-700"
+                          src={product.mainImage}
+                          alt={product.title}
+                          className="w-10 h-10 object-contain rounded-lg bg-zinc-100 dark:bg-zinc-800 p-1 shrink-0"
                         />
-                        <div className="min-w-0">
-                          <span className="text-[10px] font-bold uppercase text-orange-500">
-                            {p.brand}
-                          </span>
-                          <h4 className="font-bold text-zinc-900 dark:text-white line-clamp-1">
-                            {p.title}
-                          </h4>
-                          <div className="flex items-center gap-1 text-amber-500 text-[10px] mt-0.5">
-                            <Star className="w-3 h-3 fill-current" />
-                            <span className="font-bold">{p.rating}</span>
-                            <span className="text-zinc-400">({p.reviewsCount})</span>
+                        <div className="max-w-[220px]">
+                          <div className="font-bold text-zinc-900 dark:text-white truncate">
+                            {product.title}
+                          </div>
+                          <div className="text-[10px] text-zinc-400 uppercase font-semibold">
+                            {product.brand}
                           </div>
                         </div>
                       </div>
                     </td>
 
-                    {/* Category */}
-                    <td className="p-3.5 text-zinc-600 dark:text-zinc-300 whitespace-nowrap">
-                      {p.categoryName}
+                    <td className="p-3.5 text-zinc-600 dark:text-zinc-400 font-medium whitespace-nowrap">
+                      {product.categoryName}
                     </td>
 
-                    {/* Price & Discount */}
                     <td className="p-3.5 whitespace-nowrap">
-                      <div className="flex items-baseline gap-1.5">
-                        <span className="font-extrabold text-sm text-zinc-900 dark:text-white">
-                          {formatPrice(p.salePrice, settings.currencySymbol)}
-                        </span>
-                        {p.regularPrice > p.salePrice && (
-                          <span className="text-[11px] text-zinc-400 line-through">
-                            {formatPrice(p.regularPrice, settings.currencySymbol)}
-                          </span>
-                        )}
+                      <div className="font-extrabold text-orange-600 dark:text-orange-400 text-sm">
+                        {formatPrice(product.salePrice, settings.currencySymbol)}
                       </div>
-                      {p.discountPercent > 0 && (
-                        <span className="inline-block text-[10px] font-bold text-orange-600 dark:text-orange-400">
-                          -{p.discountPercent}% Off
-                        </span>
-                      )}
+                      <div className="text-[10px] text-zinc-400 line-through">
+                        {formatPrice(product.regularPrice, settings.currencySymbol)}
+                      </div>
                     </td>
 
-                    {/* Retailer Store */}
                     <td className="p-3.5 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${badge.bg} ${badge.text}`}>
-                          {badge.name}
-                        </span>
-                        <a
-                          href={p.affiliateUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-zinc-400 hover:text-orange-500"
-                          title="Open Affiliate Target"
-                        >
-                          <ExternalLink className="w-3.5 h-3.5" />
-                        </a>
+                      <div className="flex items-center gap-1 flex-wrap">
+                        {product.priceComparison?.map((c, i) => (
+                          <span
+                            key={i}
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${STORE_BADGES[c.store]?.bg || 'bg-zinc-100'} ${STORE_BADGES[c.store]?.text || 'text-zinc-700'}`}
+                          >
+                            {STORE_BADGES[c.store]?.name || c.store}: {formatPrice(c.price, settings.currencySymbol)}
+                          </span>
+                        ))}
                       </div>
                     </td>
 
-                    {/* Status Badges */}
-                    <td className="p-3.5">
-                      <div className="flex flex-wrap gap-1">
-                        {p.isFeatured && (
-                          <span className="bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 text-[10px] font-bold px-1.5 py-0.2 rounded">
-                            Featured
-                          </span>
-                        )}
-                        {p.isDealOfTheDay && (
-                          <span className="bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 text-[10px] font-bold px-1.5 py-0.2 rounded">
-                            Deal of Day
-                          </span>
-                        )}
-                        {p.isTopSeller && (
-                          <span className="bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 text-[10px] font-bold px-1.5 py-0.2 rounded">
-                            Top Seller
-                          </span>
-                        )}
-                      </div>
+                    <td className="p-3.5 whitespace-nowrap">
+                      <span className="font-mono font-bold text-xs px-2 py-1 bg-zinc-100 dark:bg-zinc-800 rounded-lg text-zinc-700 dark:text-zinc-300">
+                        {product.clickCount || 0}
+                      </span>
                     </td>
 
-                    {/* Clicks */}
-                    <td className="p-3.5 text-center font-bold text-orange-600 dark:text-orange-400">
-                      {p.clickCount || 0}
-                    </td>
-
-                    {/* Actions */}
                     <td className="p-3.5 text-right whitespace-nowrap">
-                      <div className="flex items-center justify-end gap-1.5">
+                      <div className="flex items-center justify-end gap-1">
                         <button
-                          onClick={() => openEditModal(p)}
-                          className="p-1.5 text-zinc-500 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
+                          onClick={() => openEditModal(product)}
+                          className="p-1.5 rounded-lg text-zinc-500 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                           title="Edit Product"
                         >
                           <Edit3 className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => setDeletingProductId(p.id)}
-                          className="p-1.5 text-zinc-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
+                          onClick={() => setDeletingProductId(product.id)}
+                          className="p-1.5 rounded-lg text-zinc-500 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                           title="Delete Product"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -381,19 +448,12 @@ export const AdminProducts: React.FC = () => {
 
       {/* Delete Confirmation Modal */}
       {deletingProductId && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-zinc-900 rounded-2xl p-6 max-w-sm w-full border border-zinc-200 dark:border-zinc-800 shadow-2xl space-y-4">
-            <div className="w-12 h-12 rounded-full bg-rose-100 dark:bg-rose-950/60 text-rose-600 flex items-center justify-center mx-auto">
-              <AlertCircle className="w-6 h-6" />
-            </div>
-            <div className="text-center">
-              <h3 className="font-bold text-zinc-900 dark:text-white text-base">
-                Delete This Product?
-              </h3>
-              <p className="text-xs text-zinc-400 mt-1">
-                This item will be removed from your store front and affiliate comparison tables.
-              </p>
-            </div>
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 max-w-sm w-full p-5 shadow-2xl space-y-4">
+            <h3 className="font-extrabold text-base text-zinc-900 dark:text-white">Delete Product?</h3>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              Are you sure you want to remove this product? This action cannot be undone.
+            </p>
             <div className="flex items-center gap-2 pt-2">
               <button
                 onClick={() => setDeletingProductId(null)}
@@ -409,417 +469,4 @@ export const AdminProducts: React.FC = () => {
                 className="flex-1 py-2 text-xs font-bold rounded-xl bg-rose-600 hover:bg-rose-700 text-white cursor-pointer"
               >
                 Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Add / Edit Product Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6">
-          <div 
-            className="relative w-full max-w-3xl bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden my-6"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="p-4 sm:px-6 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
-              <h3 className="font-extrabold text-base sm:text-lg text-zinc-900 dark:text-white">
-                {editingProduct ? 'Edit Electronics Product' : 'Add New Electronics Product'}
-              </h3>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="p-1.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSave} className="p-4 sm:p-6 max-h-[80vh] overflow-y-auto space-y-5">
-              {/* Basic Info */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="sm:col-span-2">
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 block mb-1">
-                    Product Title *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="e.g. Sony WH-1000XM5 Wireless Headphones"
-                    className="w-full px-3.5 py-2 text-xs bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-orange-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 block mb-1">
-                    Brand Name *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={brand}
-                    onChange={(e) => setBrand(e.target.value)}
-                    placeholder="e.g. Sony, Apple, Nikon, Samsung"
-                    className="w-full px-3.5 py-2 text-xs bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-orange-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 block mb-1">
-                    Department Category *
-                  </label>
-                  <select
-                    value={categoryId}
-                    onChange={(e) => setCategoryId(e.target.value)}
-                    className="w-full px-3.5 py-2 text-xs bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-orange-500 cursor-pointer"
-                  >
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Pricing Row */}
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200 dark:border-zinc-800">
-                <div>
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 block mb-1">
-                    Regular Price ({settings.currencySymbol})
-                  </label>
-                  <input
-                    type="number"
-                    step="1"
-                    required
-                    value={regularPrice}
-                    onChange={(e) => setRegularPrice(e.target.value)}
-                    className="w-full px-3 py-1.5 text-xs bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 block mb-1">
-                    Sale Deal Price ({settings.currencySymbol})
-                  </label>
-                  <input
-                    type="number"
-                    step="1"
-                    required
-                    value={salePrice}
-                    onChange={(e) => setSalePrice(e.target.value)}
-                    className="w-full px-3 py-1.5 text-xs bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500 font-bold text-orange-600"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 block mb-1">
-                    Rating (1 to 5)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="1"
-                    max="5"
-                    value={rating}
-                    onChange={(e) => setRating(e.target.value)}
-                    className="w-full px-3 py-1.5 text-xs bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 block mb-1">
-                    Reviews Count
-                  </label>
-                  <input
-                    type="number"
-                    value={reviewsCount}
-                    onChange={(e) => setReviewsCount(e.target.value)}
-                    className="w-full px-3 py-1.5 text-xs bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500"
-                  />
-                </div>
-              </div>
-
-              {/* Affiliate Platform & Link */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 block mb-1">
-                    Primary Store Platform
-                  </label>
-                  <select
-                    value={primaryStore}
-                    onChange={(e) => setPrimaryStore(e.target.value as StorePlatform)}
-                    className="w-full px-3.5 py-2 text-xs bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-orange-500 cursor-pointer"
-                  >
-                    <option value="amazon">Amazon India</option>
-                    <option value="flipkart">Flipkart</option>
-                    <option value="croma">Croma</option>
-                    <option value="reliance">Reliance Digital</option>
-                    <option value="apple">Apple India</option>
-                    <option value="bestbuy">Best Buy</option>
-                    <option value="bhphoto">B&H Photo Video</option>
-                    <option value="walmart">Walmart</option>
-                    <option value="newegg">Newegg</option>
-                    <option value="target">Target</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 block mb-1">
-                    Affiliate Target URL
-                  </label>
-                  <input
-                    type="url"
-                    required
-                    value={affiliateUrl}
-                    onChange={(e) => setAffiliateUrl(e.target.value)}
-                    placeholder="https://www.amazon.com/dp/B00.../?tag=yourtag-20"
-                    className="w-full px-3.5 py-2 text-xs bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-orange-500"
-                  />
-                </div>
-              </div>
-
-              {/* Image Selection with Presets */}
-              <div className="space-y-2">
-                <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 block">
-                  Product Image URL
-                </label>
-                <div className="flex items-center gap-3">
-                  <img
-                    src={mainImage}
-                    alt="Preview"
-                    className="w-12 h-12 object-contain rounded-xl bg-zinc-100 dark:bg-zinc-800 p-1 shrink-0 border border-zinc-200 dark:border-zinc-700"
-                  />
-                  <input
-                    type="url"
-                    required
-                    value={mainImage}
-                    onChange={(e) => setMainImage(e.target.value)}
-                    placeholder="https://images.unsplash.com/..."
-                    className="w-full px-3.5 py-2 text-xs bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-orange-500"
-                  />
-                </div>
-
-                {/* Quick Presets */}
-                <div className="pt-1">
-                  <span className="text-[10px] text-zinc-400 block mb-1 font-semibold">
-                    Quick Sample Tech Photos:
-                  </span>
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    {PRESET_ELECTRONICS_IMAGES.map((preset, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => setMainImage(preset.url)}
-                        className={`text-[10px] px-2 py-0.5 rounded-md border transition-colors cursor-pointer ${
-                          mainImage === preset.url
-                            ? 'bg-orange-500 text-white border-orange-500'
-                            : 'bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200'
-                        }`}
-                      >
-                        {preset.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Status Badges */}
-              <div className="flex flex-wrap items-center gap-4 pt-1">
-                <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-zinc-800 dark:text-zinc-200">
-                  <input
-                    type="checkbox"
-                    checked={isFeatured}
-                    onChange={(e) => setIsFeatured(e.target.checked)}
-                    className="w-4 h-4 text-orange-500 rounded focus:ring-orange-500"
-                  />
-                  <span>Featured Product</span>
-                </label>
-
-                <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-zinc-800 dark:text-zinc-200">
-                  <input
-                    type="checkbox"
-                    checked={isDealOfTheDay}
-                    onChange={(e) => setIsDealOfTheDay(e.target.checked)}
-                    className="w-4 h-4 text-orange-500 rounded focus:ring-orange-500"
-                  />
-                  <span>Deal of the Day</span>
-                </label>
-
-                <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-zinc-800 dark:text-zinc-200">
-                  <input
-                    type="checkbox"
-                    checked={isTopSeller}
-                    onChange={(e) => setIsTopSeller(e.target.checked)}
-                    className="w-4 h-4 text-orange-500 rounded focus:ring-orange-500"
-                  />
-                  <span>Top Seller Badge</span>
-                </label>
-              </div>
-
-              {/* Description */}
-              <div>
-                <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 block mb-1">
-                  Product Description
-                </label>
-                <textarea
-                  rows={3}
-                  value={fullDescription}
-                  onChange={(e) => {
-                    setFullDescription(e.target.value);
-                    if (!shortDescription) setShortDescription(e.target.value.slice(0, 100));
-                  }}
-                  className="w-full px-3.5 py-2 text-xs bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-orange-500"
-                />
-              </div>
-
-              {/* Dynamic Key-Value Specs */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
-                    Technical Specifications
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setSpecs([...specs, { key: '', val: '' }])}
-                    className="text-xs text-orange-500 hover:underline font-semibold cursor-pointer"
-                  >
-                    + Add Spec Row
-                  </button>
-                </div>
-                {specs.map((item, idx) => (
-                  <div key={idx} className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      placeholder="Spec Name (e.g. Display)"
-                      value={item.key}
-                      onChange={(e) => {
-                        const copy = [...specs];
-                        copy[idx].key = e.target.value;
-                        setSpecs(copy);
-                      }}
-                      className="w-1/3 px-3 py-1.5 text-xs bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Value (e.g. 6.7 inch OLED 120Hz)"
-                      value={item.val}
-                      onChange={(e) => {
-                        const copy = [...specs];
-                        copy[idx].val = e.target.value;
-                        setSpecs(copy);
-                      }}
-                      className="flex-1 px-3 py-1.5 text-xs bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setSpecs(specs.filter((_, i) => i !== idx))}
-                      className="p-1.5 text-zinc-400 hover:text-rose-500 cursor-pointer"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-
-              {/* Dynamic Pros & Cons */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Pros */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-[11px] font-bold uppercase tracking-wider text-emerald-600">
-                      Pros (Good Points)
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => setPros([...pros, ''])}
-                      className="text-[11px] text-emerald-600 hover:underline font-semibold cursor-pointer"
-                    >
-                      + Add Pro
-                    </button>
-                  </div>
-                  {pros.map((p, idx) => (
-                    <div key={idx} className="flex items-center gap-1.5">
-                      <input
-                        type="text"
-                        value={p}
-                        onChange={(e) => {
-                          const copy = [...pros];
-                          copy[idx] = e.target.value;
-                          setPros(copy);
-                        }}
-                        className="flex-1 px-3 py-1 text-xs bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setPros(pros.filter((_, i) => i !== idx))}
-                        className="text-zinc-400 hover:text-rose-500 cursor-pointer"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Cons */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <label className="text-[11px] font-bold uppercase tracking-wider text-rose-600">
-                      Cons (Trade-offs)
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => setCons([...cons, ''])}
-                      className="text-[11px] text-rose-600 hover:underline font-semibold cursor-pointer"
-                    >
-                      + Add Con
-                    </button>
-                  </div>
-                  {cons.map((c, idx) => (
-                    <div key={idx} className="flex items-center gap-1.5">
-                      <input
-                        type="text"
-                        value={c}
-                        onChange={(e) => {
-                          const copy = [...cons];
-                          copy[idx] = e.target.value;
-                          setCons(copy);
-                        }}
-                        className="flex-1 px-3 py-1 text-xs bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setCons(cons.filter((_, i) => i !== idx))}
-                        className="text-zinc-400 hover:text-rose-500 cursor-pointer"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Form Actions */}
-              <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 text-xs font-semibold rounded-xl border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs px-6 py-2.5 rounded-xl shadow-md cursor-pointer"
-                >
-                  {editingProduct ? 'Save Product Updates' : 'Add to Catalog'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
+              </but
