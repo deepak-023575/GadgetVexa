@@ -469,4 +469,511 @@ export const AdminProducts: React.FC = () => {
                 className="flex-1 py-2 text-xs font-bold rounded-xl bg-rose-600 hover:bg-rose-700 text-white cursor-pointer"
               >
                 Delete
-              </but
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add / Edit Product Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6">
+          <div 
+            className="relative w-full max-w-3xl bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl border border-zinc-200 dark:border-zinc-800 overflow-hidden my-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-4 sm:px-6 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
+              <h3 className="font-extrabold text-base sm:text-lg text-zinc-900 dark:text-white">
+                {editingProduct ? 'Edit Electronics Product' : 'Add New Electronics Product'}
+              </h3>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="p-1.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSave} className="p-4 sm:p-6 max-h-[80vh] overflow-y-auto space-y-5">
+              {/* Basic Info */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="sm:col-span-2">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 block mb-1">
+                    Product Title *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="e.g. Sony WH-1000XM5 Wireless Headphones"
+                    className="w-full px-3.5 py-2 text-xs bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-orange-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 block mb-1">
+                    Brand Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={brand}
+                    onChange={(e) => setBrand(e.target.value)}
+                    placeholder="e.g. Sony, Apple, Nikon, Samsung"
+                    className="w-full px-3.5 py-2 text-xs bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-orange-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 block mb-1">
+                    Department Category *
+                  </label>
+                  <select
+                    value={categoryId}
+                    onChange={(e) => setCategoryId(e.target.value)}
+                    className="w-full px-3.5 py-2 text-xs bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-orange-500 cursor-pointer"
+                  >
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Pricing & Rating */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-zinc-50 dark:bg-zinc-800/40 p-3.5 rounded-2xl border border-zinc-200 dark:border-zinc-800">
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 block mb-1">
+                    Regular MRP (₹) *
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    value={regularPrice}
+                    onChange={(e) => setRegularPrice(e.target.value)}
+                    className="w-full px-3 py-1.5 text-xs bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 block mb-1">
+                    Deal Price (₹) *
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    value={salePrice}
+                    onChange={(e) => setSalePrice(e.target.value)}
+                    className="w-full px-3 py-1.5 text-xs bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg font-bold text-orange-600 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 block mb-1">
+                    Rating (1 to 5)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="1"
+                    max="5"
+                    value={rating}
+                    onChange={(e) => setRating(e.target.value)}
+                    className="w-full px-3 py-1.5 text-xs bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 block mb-1">
+                    Reviews Count
+                  </label>
+                  <input
+                    type="number"
+                    value={reviewsCount}
+                    onChange={(e) => setReviewsCount(e.target.value)}
+                    className="w-full px-3 py-1.5 text-xs bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500"
+                  />
+                </div>
+              </div>
+
+              {/* Multi-Store Price Comparison & Affiliate Links (Key User Request!) */}
+              <div className="space-y-3 p-4 bg-zinc-50 dark:bg-zinc-800/60 rounded-2xl border border-zinc-200 dark:border-zinc-700/80">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-orange-500 text-white">
+                      <Store className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-zinc-900 dark:text-white uppercase tracking-wider">
+                        Multi-Store Comparison Links (Amazon, Flipkart, Croma...)
+                      </h4>
+                      <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                        Har store ka alag deal price aur apna alag affiliate link dalein. Visitors dono/sab links par click kar sakenge.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={addComparisonStore}
+                    className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1 shadow-sm transition-all cursor-pointer shrink-0"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>+ Add Store Link</span>
+                  </button>
+                </div>
+
+                <div className="space-y-3 pt-1">
+                  {comparisonOffers.map((offer, idx) => {
+                    const badgeInfo = STORE_BADGES[offer.store] || STORE_BADGES.amazon;
+                    return (
+                      <div
+                        key={offer.id}
+                        className="p-3.5 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700 shadow-sm space-y-3"
+                      >
+                        <div className="flex items-center justify-between gap-2 border-b border-zinc-100 dark:border-zinc-800 pb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="w-5 h-5 rounded-full bg-orange-100 dark:bg-orange-950 text-orange-600 dark:text-orange-400 font-bold text-[11px] flex items-center justify-center">
+                              {idx + 1}
+                            </span>
+                            <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200">
+                              Store #{idx + 1}:
+                            </span>
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${badgeInfo.bg} ${badgeInfo.text}`}>
+                              {badgeInfo.name}
+                            </span>
+                          </div>
+
+                          {comparisonOffers.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => removeComparisonStore(offer.id)}
+                              className="text-zinc-400 hover:text-rose-500 p-1 rounded-lg transition-colors cursor-pointer"
+                              title="Delete this store offer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Store Selection & Price Row */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <div>
+                            <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-400 block mb-1">
+                              Store Platform *
+                            </label>
+                            <select
+                              value={offer.store}
+                              onChange={(e) => updateComparisonStore(offer.id, 'store', e.target.value as StorePlatform)}
+                              className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl font-bold text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-1 focus:ring-orange-500 cursor-pointer"
+                            >
+                              <option value="amazon">Amazon India</option>
+                              <option value="flipkart">Flipkart</option>
+                              <option value="croma">Croma</option>
+                              <option value="reliance">Reliance Digital</option>
+                              <option value="apple">Apple India</option>
+                              <option value="bestbuy">Best Buy</option>
+                              <option value="bhphoto">B&H Photo Video</option>
+                              <option value="walmart">Walmart</option>
+                              <option value="newegg">Newegg</option>
+                              <option value="target">Target</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-400 block mb-1">
+                              Deal Price (₹) *
+                            </label>
+                            <input
+                              type="number"
+                              required
+                              value={offer.price}
+                              onChange={(e) => updateComparisonStore(offer.id, 'price', e.target.value)}
+                              placeholder="e.g. 8499"
+                              className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl font-bold text-orange-600 dark:text-orange-400 focus:outline-none focus:ring-1 focus:ring-orange-500"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-400 block mb-1">
+                              Offer Badge / Tag
+                            </label>
+                            <input
+                              type="text"
+                              value={offer.badge}
+                              onChange={(e) => updateComparisonStore(offer.id, 'badge', e.target.value)}
+                              placeholder="e.g. Lowest Price, Save ₹3,500"
+                              className="w-full px-3 py-2 text-xs bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-orange-500"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Direct Affiliate URL */}
+                        <div>
+                          <label className="text-[10px] font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-400 block mb-1">
+                            {badgeInfo.name} Affiliate URL (Target Link) *
+                          </label>
+                          <input
+                            type="url"
+                            required
+                            value={offer.url}
+                            onChange={(e) => updateComparisonStore(offer.id, 'url', e.target.value)}
+                            placeholder={`Paste ${badgeInfo.name} affiliate link here (e.g. ${offer.store === 'amazon' ? 'https://www.amazon.in/dp/...?tag=...' : 'https://www.flipkart.com/...?affid=...' })`}
+                            className="w-full px-3.5 py-2 text-xs bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-orange-500 font-mono text-zinc-900 dark:text-zinc-100"
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Image Selection with Presets */}
+              <div className="space-y-2">
+                <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 block">
+                  Product Image URL
+                </label>
+                <div className="flex items-center gap-3">
+                  <img
+                    src={mainImage}
+                    alt="Preview"
+                    className="w-12 h-12 object-contain rounded-xl bg-zinc-100 dark:bg-zinc-800 p-1 shrink-0 border border-zinc-200 dark:border-zinc-700"
+                  />
+                  <input
+                    type="url"
+                    required
+                    value={mainImage}
+                    onChange={(e) => setMainImage(e.target.value)}
+                    placeholder="https://images.unsplash.com/..."
+                    className="w-full px-3.5 py-2 text-xs bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-orange-500"
+                  />
+                </div>
+
+                {/* Quick Presets */}
+                <div className="pt-1">
+                  <span className="text-[10px] text-zinc-400 block mb-1 font-semibold">
+                    Quick Sample Tech Photos:
+                  </span>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {PRESET_ELECTRONICS_IMAGES.map((preset, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setMainImage(preset.url)}
+                        className={`text-[10px] px-2 py-0.5 rounded-md border transition-colors cursor-pointer ${
+                          mainImage === preset.url
+                            ? 'bg-orange-500 text-white border-orange-500'
+                            : 'bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200'
+                        }`}
+                      >
+                        {preset.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Status Badges */}
+              <div className="flex flex-wrap items-center gap-4 pt-1">
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-zinc-800 dark:text-zinc-200">
+                  <input
+                    type="checkbox"
+                    checked={isFeatured}
+                    onChange={(e) => setIsFeatured(e.target.checked)}
+                    className="w-4 h-4 rounded text-orange-500 focus:ring-orange-500"
+                  />
+                  <span>Featured Product</span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-zinc-800 dark:text-zinc-200">
+                  <input
+                    type="checkbox"
+                    checked={isDealOfTheDay}
+                    onChange={(e) => setIsDealOfTheDay(e.target.checked)}
+                    className="w-4 h-4 rounded text-orange-500 focus:ring-orange-500"
+                  />
+                  <span>Deal of the Day</span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-zinc-800 dark:text-zinc-200">
+                  <input
+                    type="checkbox"
+                    checked={isTopSeller}
+                    onChange={(e) => setIsTopSeller(e.target.checked)}
+                    className="w-4 h-4 rounded text-orange-500 focus:ring-orange-500"
+                  />
+                  <span>Top Seller Badge</span>
+                </label>
+              </div>
+
+              {/* Short & Full Description */}
+              <div>
+                <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300 block mb-1">
+                  Product Description
+                </label>
+                <textarea
+                  rows={2}
+                  value={shortDescription}
+                  onChange={(e) => setShortDescription(e.target.value)}
+                  placeholder="Key highlight or summary of this product"
+                  className="w-full px-3.5 py-2 text-xs bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-orange-500"
+                />
+              </div>
+
+              {/* Dynamic Technical Specs */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-[11px] font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
+                    Technical Specifications
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setSpecs([...specs, { key: '', val: '' }])}
+                    className="text-xs font-semibold text-orange-600 dark:text-orange-400 hover:underline cursor-pointer"
+                  >
+                    + Add Spec Row
+                  </button>
+                </div>
+
+                <div className="space-y-2">
+                  {specs.map((item, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        placeholder="e.g. Battery, Power, Display"
+                        value={item.key}
+                        onChange={(e) => {
+                          const updated = [...specs];
+                          updated[idx].key = e.target.value;
+                          setSpecs(updated);
+                        }}
+                        className="w-1/3 px-3 py-1.5 text-xs bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500"
+                      />
+                      <input
+                        type="text"
+                        placeholder="e.g. 5000 mAh, 1200 Watts"
+                        value={item.val}
+                        onChange={(e) => {
+                          const updated = [...specs];
+                          updated[idx].val = e.target.value;
+                          setSpecs(updated);
+                        }}
+                        className="flex-1 px-3 py-1.5 text-xs bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-orange-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setSpecs(specs.filter((_, i) => i !== idx))}
+                        className="p-1.5 text-zinc-400 hover:text-rose-500 cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Pros and Cons */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                      Pros (Good Points)
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setPros([...pros, ''])}
+                      className="text-[10px] font-bold text-emerald-600 hover:underline"
+                    >
+                      + Add Pro
+                    </button>
+                  </div>
+                  <div className="space-y-1.5">
+                    {pros.map((p, idx) => (
+                      <div key={idx} className="flex items-center gap-1.5">
+                        <input
+                          type="text"
+                          value={p}
+                          onChange={(e) => {
+                            const updated = [...pros];
+                            updated[idx] = e.target.value;
+                            setPros(updated);
+                          }}
+                          className="w-full px-2.5 py-1 text-xs bg-emerald-50/40 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/40 rounded-lg text-emerald-900 dark:text-emerald-200 focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setPros(pros.filter((_, i) => i !== idx))}
+                          className="p-1 text-zinc-400 hover:text-rose-500"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[11px] font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400">
+                      Cons (Trade-Offs)
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setCons([...cons, ''])}
+                      className="text-[10px] font-bold text-rose-600 hover:underline"
+                    >
+                      + Add Con
+                    </button>
+                  </div>
+                  <div className="space-y-1.5">
+                    {cons.map((c, idx) => (
+                      <div key={idx} className="flex items-center gap-1.5">
+                        <input
+                          type="text"
+                          value={c}
+                          onChange={(e) => {
+                            const updated = [...cons];
+                            updated[idx] = e.target.value;
+                            setCons(updated);
+                          }}
+                          className="w-full px-2.5 py-1 text-xs bg-rose-50/40 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-800/40 rounded-lg text-rose-900 dark:text-rose-200 focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setCons(cons.filter((_, i) => i !== idx))}
+                          className="p-1 text-zinc-400 hover:text-rose-500"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Submit Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-zinc-200 dark:border-zinc-800">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2 text-xs font-semibold rounded-xl border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 text-xs font-bold rounded-xl bg-orange-500 hover:bg-orange-600 text-white shadow-md shadow-orange-500/25 transition-all cursor-pointer"
+                >
+                  {editingProduct ? 'Save Product Updates' : 'Publish Product Deal'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
