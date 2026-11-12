@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   ArrowRight, 
   ChevronRight, 
@@ -6,7 +6,7 @@ import {
   Zap 
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
-import { DynamicIcon, formatPrice } from '../utils/iconHelper';
+import { DynamicIcon, formatPrice, STORE_BADGES } from '../utils/iconHelper';
 
 export const HeroSection: React.FC = () => {
   const { 
@@ -24,71 +24,81 @@ export const HeroSection: React.FC = () => {
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
 
-  const bengooProd = products.find(p => p.id === 'prod-bengoo-headset') || products[0];
-  const sonyProd = products.find(p => p.id === 'prod-sony-wh1000xm5') || products[1] || bengooProd;
-  const tvProd = products.find(p => p.id === 'prod-samsung-qled-tv') || products[2] || bengooProd;
-  const laptopProd = products.find(p => p.id === 'prod-acer-aspire-5') || products[3] || bengooProd;
-
-  const slides = [
-    {
-      id: 0,
-      subTitle: 'Feel the bass in your bones',
-      title: 'LISTEN MUSIC YOU WANT',
-      caption: 'MOVE WITH THE MUSIC !! PICK AS PER YOUR NEEDS',
-      buttonText: 'Shop Best Deal',
-      product: bengooProd,
-      image: bengooProd?.mainImage || 'https://images.unsplash.com/photo-1546435770-a3e426bf472b?auto=format&fit=crop&w=800&q=80',
-      badge: '42% OFF TODAY',
-      gradient: 'from-amber-500/10 via-orange-500/10 to-transparent',
-    },
-    {
-      id: 1,
-      subTitle: 'Industry-Leading Noise Cancelling',
-      title: 'SONY WH-1000XM5',
-      caption: 'MAGNIFICENT HI-RES SOUND WITHOUT DISTRACTIONS',
-      buttonText: 'Check Price on Amazon',
-      product: sonyProd,
-      image: sonyProd?.mainImage || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=80',
-      badge: 'FLAGSHIP AUDIO DEAL',
-      gradient: 'from-blue-500/10 via-indigo-500/10 to-transparent',
-    },
-    {
-      id: 2,
-      subTitle: 'Cinematic 4K Mini-LED Experience',
-      title: 'SAMSUNG 65" NEO QLED',
-      caption: 'QUANTUM HDR 32X WITH IMMERSIVE DOLBY ATMOS AUDIO',
-      buttonText: 'View Smart TV Deal',
-      product: tvProd,
-      image: tvProd?.mainImage || 'https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?auto=format&fit=crop&w=800&q=80',
-      badge: 'SAVE ₹25,000+',
-      gradient: 'from-purple-500/10 via-pink-500/10 to-transparent',
-    },
-    {
-      id: 3,
-      subTitle: 'High-Performance Productivity',
-      title: 'ACER ASPIRE 5 LAPTOP',
-      caption: 'INTEL CORE I5 12TH GEN • 16GB RAM • 512GB NVME SSD',
-      buttonText: 'Check Laptop Price',
-      product: laptopProd,
-      image: laptopProd?.mainImage || 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?auto=format&fit=crop&w=800&q=80',
-      badge: 'BESTSELLER TECH',
-      gradient: 'from-emerald-500/10 via-teal-500/10 to-transparent',
-    },
+  const gradients = [
+    'from-amber-500/10 via-orange-500/10 to-transparent',
+    'from-blue-500/10 via-indigo-500/10 to-transparent',
+    'from-purple-500/10 via-pink-500/10 to-transparent',
+    'from-emerald-500/10 via-teal-500/10 to-transparent',
+    'from-rose-500/10 via-orange-500/10 to-transparent',
   ];
 
-  // Auto-play timer
+  // Dynamically get the most recent products (newest added first)
+  const recentProducts = useMemo(() => {
+    if (!products || products.length === 0) return [];
+
+    const sorted = [...products].sort((a, b) => {
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      if (timeB !== timeA) return timeB - timeA;
+      return (b.isNew || b.isFeatured ? 1 : 0) - (a.isNew || a.isFeatured ? 1 : 0);
+    });
+
+    return sorted.slice(0, 5);
+  }, [products]);
+
+  // Construct dynamic slides directly from the most recent products
+  const slides = useMemo(() => {
+    if (recentProducts.length === 0) return [];
+
+    return recentProducts.map((p, idx) => {
+      const discount = p.discountPercent || (p.regularPrice > p.salePrice ? Math.round(((p.regularPrice - p.salePrice) / p.regularPrice) * 100) : 0);
+      
+      let badge = 'RECENT DEAL';
+      if (p.isDealOfTheDay) badge = 'DEAL OF THE DAY';
+      else if (discount >= 10) badge = `${discount}% OFF TODAY`;
+      else if (p.isTopSeller) badge = 'TOP SELLER';
+      else if (p.isNew) badge = 'NEW ARRIVAL';
+
+      const storeName = STORE_BADGES[p.primaryStore]?.name || 'Store';
+
+      return {
+        id: idx,
+        subTitle: p.brand ? `${p.brand.toUpperCase()} • ${p.categoryName.toUpperCase()}` : p.categoryName.toUpperCase(),
+        title: p.title,
+        caption: p.shortDescription || `VERIFIED ${p.brand || 'ELECTRONICS'} WITH REAL-TIME LOWEST PRICE TRACKING`,
+        buttonText: `Check Deal on ${storeName}`,
+        product: p,
+        image: p.mainImage,
+        badge,
+        gradient: gradients[idx % gradients.length],
+      };
+    });
+  }, [recentProducts]);
+
   useEffect(() => {
-    if (isPaused) return;
+    if (slides.length > 0 && activeSlide >= slides.length) {
+      setActiveSlide(0);
+    }
+  }, [slides.length, activeSlide]);
+
+  useEffect(() => {
+    if (isPaused || slides.length <= 1) return;
     const timer = setInterval(() => {
       setActiveSlide(prev => (prev + 1) % slides.length);
     }, 4500);
     return () => clearInterval(timer);
   }, [isPaused, slides.length]);
 
-  const nextSlide = () => setActiveSlide(prev => (prev + 1) % slides.length);
-  const prevSlide = () => setActiveSlide(prev => (prev - 1 + slides.length) % slides.length);
+  const nextSlide = () => {
+    if (slides.length <= 1) return;
+    setActiveSlide(prev => (prev + 1) % slides.length);
+  };
 
-  // Mobile Touch Swipe
+  const prevSlide = () => {
+    if (slides.length <= 1) return;
+    setActiveSlide(prev => (prev - 1 + slides.length) % slides.length);
+  };
+
   const handleTouchStart = (e: React.TouchEvent) => {
     setIsPaused(true);
     setTouchEnd(null);
@@ -103,7 +113,8 @@ export const HeroSection: React.FC = () => {
     if (distance < -45) prevSlide();
   };
 
-  const currentSlide = slides[activeSlide];
+  const currentSlide = slides[activeSlide] || slides[0];
+  if (!currentSlide) return null;
 
   const handleHeroCta = () => {
     if (currentSlide.product) {
@@ -184,28 +195,32 @@ export const HeroSection: React.FC = () => {
             <div className={`absolute inset-0 bg-gradient-to-r ${currentSlide.gradient} transition-all duration-700 pointer-events-none`} />
 
             {/* Previous Arrow Button */}
-            <button
-              onClick={prevSlide}
-              className="absolute left-2.5 sm:left-4 top-1/2 -translate-y-1/2 z-30 w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-white/90 dark:bg-zinc-800/90 text-zinc-700 dark:text-zinc-200 shadow-xl border border-zinc-200 dark:border-zinc-700 flex items-center justify-center hover:bg-orange-500 hover:text-white dark:hover:bg-orange-500 dark:hover:text-white transition-all duration-200 cursor-pointer active:scale-95"
-              aria-label="Previous Slide"
-              title="Previous Slide"
-            >
-              <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
-            </button>
+            {slides.length > 1 && (
+              <button
+                onClick={prevSlide}
+                className="absolute left-2.5 sm:left-4 top-1/2 -translate-y-1/2 z-30 w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-white/90 dark:bg-zinc-800/90 text-zinc-700 dark:text-zinc-200 shadow-xl border border-zinc-200 dark:border-zinc-700 flex items-center justify-center hover:bg-orange-500 hover:text-white dark:hover:bg-orange-500 dark:hover:text-white transition-all duration-200 cursor-pointer active:scale-95"
+                aria-label="Previous Slide"
+                title="Previous Slide"
+              >
+                <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
+              </button>
+            )}
 
             {/* Next Arrow Button */}
-            <button
-              onClick={nextSlide}
-              className="absolute right-2.5 sm:right-4 top-1/2 -translate-y-1/2 z-30 w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-white/90 dark:bg-zinc-800/90 text-zinc-700 dark:text-zinc-200 shadow-xl border border-zinc-200 dark:border-zinc-700 flex items-center justify-center hover:bg-orange-500 hover:text-white dark:hover:bg-orange-500 dark:hover:text-white transition-all duration-200 cursor-pointer active:scale-95"
-              aria-label="Next Slide"
-              title="Next Slide"
-            >
-              <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
-            </button>
+            {slides.length > 1 && (
+              <button
+                onClick={nextSlide}
+                className="absolute right-2.5 sm:right-4 top-1/2 -translate-y-1/2 z-30 w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-white/90 dark:bg-zinc-800/90 text-zinc-700 dark:text-zinc-200 shadow-xl border border-zinc-200 dark:border-zinc-700 flex items-center justify-center hover:bg-orange-500 hover:text-white dark:hover:bg-orange-500 dark:hover:text-white transition-all duration-200 cursor-pointer active:scale-95"
+                aria-label="Next Slide"
+                title="Next Slide"
+              >
+                <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
+              </button>
+            )}
 
             {/* Slider Content */}
-            <div key={activeSlide} className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center w-full z-10 animate-in fade-in slide-in-from-right-4 duration-300">
-              <div className="md:col-span-7 space-y-4">
+            <div key={currentSlide.product.id || activeSlide} className="grid grid-cols-1 md:grid-cols-12 gap-8 items-center w-full z-10 animate-in fade-in slide-in-from-right-4 duration-300">
+              <div className="md:col-span-7 space-y-3 sm:space-y-4">
                 <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-100 dark:bg-orange-950/60 text-orange-600 dark:text-orange-400 text-xs font-bold tracking-wide shadow-sm">
                   <Zap className="w-3.5 h-3.5" />
                   <span>{currentSlide.badge}</span>
@@ -215,11 +230,11 @@ export const HeroSection: React.FC = () => {
                   {currentSlide.subTitle}
                 </p>
 
-                <h1 className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tight text-zinc-900 dark:text-white leading-[1.15]">
+                <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black tracking-tight text-zinc-900 dark:text-white leading-[1.15] line-clamp-2">
                   {currentSlide.title}
                 </h1>
 
-                <p className="text-xs sm:text-sm font-medium text-zinc-600 dark:text-zinc-300 tracking-wide uppercase max-w-md">
+                <p className="text-xs sm:text-sm font-medium text-zinc-600 dark:text-zinc-300 tracking-wide line-clamp-2 max-w-md">
                   {currentSlide.caption}
                 </p>
 
@@ -245,13 +260,14 @@ export const HeroSection: React.FC = () => {
                 </div>
               </div>
 
+              {/* Product Visual */}
               <div className="md:col-span-5 flex justify-center relative">
                 <div className="relative">
                   <div className="absolute inset-0 bg-orange-400/25 dark:bg-orange-500/15 blur-3xl rounded-full scale-90 transition-transform duration-500" />
                   <img
                     src={currentSlide.image}
                     alt={currentSlide.title}
-                    className="relative w-60 h-60 sm:w-72 sm:h-72 object-contain drop-shadow-2xl transition-transform duration-500 hover:scale-105"
+                    className="relative w-56 h-56 sm:w-72 sm:h-72 object-contain drop-shadow-2xl transition-transform duration-500 hover:scale-105"
                   />
                   {currentSlide.product && (
                     <div className="absolute -bottom-2 -left-2 sm:bottom-0 sm:left-0 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md px-3.5 py-2 rounded-xl shadow-xl border border-zinc-200 dark:border-zinc-700 flex items-center gap-2">
@@ -261,9 +277,11 @@ export const HeroSection: React.FC = () => {
                           <span className="text-base font-black text-orange-600 dark:text-orange-400">
                             {formatPrice(currentSlide.product.salePrice, settings.currencySymbol)}
                           </span>
-                          <span className="text-xs text-zinc-400 line-through">
-                            {formatPrice(currentSlide.product.regularPrice, settings.currencySymbol)}
-                          </span>
+                          {currentSlide.product.regularPrice > currentSlide.product.salePrice && (
+                            <span className="text-xs text-zinc-400 line-through">
+                              {formatPrice(currentSlide.product.regularPrice, settings.currencySymbol)}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -273,20 +291,22 @@ export const HeroSection: React.FC = () => {
             </div>
 
             {/* Slider Dots */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 z-20 bg-white/60 dark:bg-zinc-800/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-zinc-200/50 dark:border-zinc-700/50">
-              {slides.map((slide) => (
-                <button
-                  key={slide.id}
-                  onClick={() => setActiveSlide(slide.id)}
-                  className={`transition-all duration-300 rounded-full cursor-pointer ${
-                    activeSlide === slide.id
-                      ? 'w-7 h-2 bg-orange-500 shadow-sm'
-                      : 'w-2 h-2 bg-zinc-300 dark:bg-zinc-600 hover:bg-orange-400'
-                  }`}
-                  aria-label={`Go to slide ${slide.id + 1}`}
-                />
-              ))}
-            </div>
+            {slides.length > 1 && (
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 z-20 bg-white/60 dark:bg-zinc-800/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-zinc-200/50 dark:border-zinc-700/50">
+                {slides.map((slide) => (
+                  <button
+                    key={slide.id}
+                    onClick={() => setActiveSlide(slide.id)}
+                    className={`transition-all duration-300 rounded-full cursor-pointer ${
+                      activeSlide === slide.id
+                        ? 'w-7 h-2 bg-orange-500 shadow-sm'
+                        : 'w-2 h-2 bg-zinc-300 dark:bg-zinc-600 hover:bg-orange-400'
+                    }`}
+                    aria-label={`Go to slide ${slide.id + 1}`}
+                  />
+                ))}
+              </div>
+            )}
           </div>
 
           {/* 3-Column Promo Banner Row */}
